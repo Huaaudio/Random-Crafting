@@ -17,12 +17,10 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.item.crafting.RecipeType;
-import net.minecraftforge.common.crafting.CraftingHelper;
-import net.minecraftforge.common.crafting.conditions.ICondition;
 import org.apache.commons.lang3.tuple.Triple;
-import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -31,12 +29,10 @@ import java.util.*;
 
 @Mixin(RecipeManager.class)
 public class RecipeManagerMixin implements IMessUpRecipes {
-	@Shadow @Final
-	private ICondition.IContext context;
-
 	@Shadow
 	private Map<RecipeType<?>, Map<ResourceLocation, Recipe<?>>> recipes;
 
+	@Unique
 	private Map<RecipeType<?>, Map<ResourceLocation, Recipe<?>>> backup_recipes;
 
 	@Inject(method = "apply(Ljava/util/Map;Lnet/minecraft/server/packs/resources/ResourceManager;Lnet/minecraft/util/profiling/ProfilerFiller;)V", at = @At(value = "TAIL"))
@@ -45,17 +41,9 @@ public class RecipeManagerMixin implements IMessUpRecipes {
 
 		for(Map.Entry<ResourceLocation, JsonElement> entry : jsonMap.entrySet()) {
 			ResourceLocation id = entry.getKey();
-			if (id.getPath().startsWith("_")) {
-				continue;
-			}
-
 			try {
-				if (entry.getValue().isJsonObject() && !CraftingHelper.processConditions(entry.getValue().getAsJsonObject(), "conditions", this.context)) {
-					RCLogger.debug("Skipping loading recipe {} as it's conditions were not met", id);
-					continue;
-				}
-				Recipe<?> recipe = RecipeManager.fromJson(id, GsonHelper.convertToJsonObject(entry.getValue(), "top element"), this.context);
-				if (recipe == null) {
+				Recipe<?> recipe = RecipeManager.fromJson(id, GsonHelper.convertToJsonObject(entry.getValue(), "top element"));
+				if (recipe == null) {	//Compat with CrT
 					RCLogger.info("Skipping loading recipe {} as it's serializer returned null", id);
 					continue;
 				}
