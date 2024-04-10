@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "randomcrafting",
+  "version": "${version}",
+
+  "name": "Random Crafting",
+  "description": "All recipes are messed up by this mod. You may be able to get a stick from a iron block, or get a netherite ingot from three cobblestones. Can you still beat the game?",
+  "authors": [
+    "Liu Dongyu"
+  ],
+  "contact": {
+    "sources": "https://github.com/Viola-Siemens/Random-Crafting"
+  },
+
+  "license": "LGPL",
+  "icon": "logo.png",
+
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.hexagram2021.randomcrafting.RandomCrafting"
+    ]
+  },
+  "mixins": [
+    "randomcrafting.mixins.json"
+  ],
+
+  "depends": {
+    "fabricloader": ">=0.14.12",
+    "fabric-api": "*",
+    "forgeconfigapiport": ">=4.0 <5",
+    "minecraft": ">=1.19 <1.19.1",
+    "java": ">=17"
+  }
+}
