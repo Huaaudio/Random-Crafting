@@ -19,9 +19,10 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.item.crafting.RecipeType;
-import net.minecraftforge.common.crafting.CraftingHelper;
+import net.minecraftforge.common.ForgeHooks;
 import net.minecraftforge.common.crafting.conditions.ICondition;
 import org.apache.commons.lang3.tuple.Triple;
 import org.spongepowered.asm.mixin.Final;
@@ -32,7 +33,10 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import javax.annotation.Nullable;
-import java.util.*;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 @Mixin(RecipeManager.class)
 public class RecipeManagerMixin implements IMessUpRecipes {
@@ -40,14 +44,14 @@ public class RecipeManagerMixin implements IMessUpRecipes {
 	private ICondition.IContext context;
 
 	@Shadow
-	private Map<RecipeType<?>, Map<ResourceLocation, Recipe<?>>> recipes;
+	private Map<RecipeType<?>, Map<ResourceLocation, RecipeHolder<?>>> recipes;
 
 	@Nullable
-	private Map<RecipeType<?>, Map<ResourceLocation, Recipe<?>>> backup_recipes;
+	private Map<RecipeType<?>, Map<ResourceLocation, RecipeHolder<?>>> backup_recipes;
 
 	@Inject(method = "apply(Ljava/util/Map;Lnet/minecraft/server/packs/resources/ResourceManager;Lnet/minecraft/util/profiling/ProfilerFiller;)V", at = @At(value = "TAIL"))
 	public void init_backups(Map<ResourceLocation, JsonElement> jsonMap, ResourceManager resourceManager, ProfilerFiller profilerFiller, CallbackInfo ci) {
-		Map<RecipeType<?>, ImmutableMap.Builder<ResourceLocation, Recipe<?>>> backup_map = Maps.newHashMap();
+		Map<RecipeType<?>, ImmutableMap.Builder<ResourceLocation, RecipeHolder<?>>> backup_map = Maps.newHashMap();
 
 		for(Map.Entry<ResourceLocation, JsonElement> entry : jsonMap.entrySet()) {
 			ResourceLocation id = entry.getKey();
@@ -56,18 +60,19 @@ public class RecipeManagerMixin implements IMessUpRecipes {
 			}
 
 			try {
-				if (entry.getValue().isJsonObject() && !CraftingHelper.processConditions(entry.getValue().getAsJsonObject(), "conditions", this.context)) {
+				if (entry.getValue().isJsonObject() && !ForgeHooks.readAndTestCondition(this.context, entry.getValue().getAsJsonObject())) {
 					RCLogger.debug("Skipping loading recipe {} as it's conditions were not met", id);
 					continue;
 				}
-				Recipe<?> recipe = RecipeManager.fromJson(id, GsonHelper.convertToJsonObject(entry.getValue(), "top element"), this.context);
+				RecipeHolder<?> recipeHolder = RecipeManager.fromJson(id, GsonHelper.convertToJsonObject(entry.getValue(), "top element"));
+				Recipe<?> recipe = recipeHolder.value();
 				if (recipe == null) {	//CraftTweaker
 					RCLogger.info("Skipping loading recipe {} as it's serializer returned null", id);
 					continue;
 				}
 				if(!RCCommonConfig.WHITELIST_RECIPE_TYPES.get().contains(recipe.getType().toString()) &&
-						!RCCommonConfig.WHITELIST_RECIPES.get().contains(recipe.getId().toString())) {
-					backup_map.computeIfAbsent(recipe.getType(), recipeType -> ImmutableMap.builder()).put(id, recipe);
+						!RCCommonConfig.WHITELIST_RECIPES.get().contains(recipeHolder.id().toString())) {
+					backup_map.computeIfAbsent(recipe.getType(), recipeType -> ImmutableMap.builder()).put(id, recipeHolder);
 				}
 			} catch (IllegalArgumentException | JsonParseException ignored) { }
 		}
@@ -78,13 +83,13 @@ public class RecipeManagerMixin implements IMessUpRecipes {
 	@Override
 	public void revoke(RegistryAccess registryAccess) {
 		Objects.requireNonNull(this.backup_recipes).forEach((recipeType, recipeMap) -> {
-			Map<ResourceLocation, Recipe<?>> originalMap = this.recipes.get(recipeType);
+			Map<ResourceLocation, RecipeHolder<?>> originalMap = this.recipes.get(recipeType);
 			recipeMap.forEach((id, recipe) -> {
 				if(originalMap.get(id) == null) {
 					RCLogger.error("Find a null recipe: " + recipeType + " - <" + id + ">");
 				} else {
-					ItemStack itemStack = originalMap.get(id).getResultItem(registryAccess);
-					ItemStack target = recipe.getResultItem(registryAccess);
+					ItemStack itemStack = originalMap.get(id).value().getResultItem(registryAccess);
+					ItemStack target = recipe.value().getResultItem(registryAccess);
 					((IMutableItemStack) (Object) itemStack).setItemAndCount(target.getItem(), target.getCount());
 				}
 			});
@@ -111,7 +116,7 @@ public class RecipeManagerMixin implements IMessUpRecipes {
 						RCLogger.error("Find a null recipe: " + recipeType + " - <" + id + ">");
 					} else {
 						list.add(Triple.of(recipeType, id, results.size() + temp_results.size()));
-						temp_results.add(recipe.getResultItem(registryAccess));
+						temp_results.add(recipe.value().getResultItem(registryAccess));
 					}
 				});
 				ListShuffler.shuffle(temp_results, random);
@@ -123,14 +128,14 @@ public class RecipeManagerMixin implements IMessUpRecipes {
 					RCLogger.error("Find a null recipe: " + recipeType + " - <" + id + ">");
 				} else {
 					list.add(Triple.of(recipeType, id, results.size()));
-					results.add(recipe.getResultItem(registryAccess));
+					results.add(recipe.value().getResultItem(registryAccess));
 				}
 			}));
 			ListShuffler.shuffle(results, random);
 		}
 
 		list.forEach(tp -> {
-			ItemStack itemStack = this.recipes.get(tp.getLeft()).get(tp.getMiddle()).getResultItem(registryAccess);
+			ItemStack itemStack = this.recipes.get(tp.getLeft()).get(tp.getMiddle()).value().getResultItem(registryAccess);
 			ItemStack target = results.get(tp.getRight());
 			((IMutableItemStack)(Object) itemStack).setItemAndCount(target.getItem(), target.getCount());
 		});
