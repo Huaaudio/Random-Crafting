@@ -1,19 +1,19 @@
 package com.hexagram2021.randomcrafting.config;
 
-import net.minecraftforge.common.ForgeConfigSpec;
+import net.neoforged.neoforge.common.ModConfigSpec;
 
 public class RCServerConfig {
-	public static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
-	public static final ForgeConfigSpec SPEC;
+	public static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
+	public static final ModConfigSpec SPEC;
 
-	public static final ForgeConfigSpec.LongValue SALT;
-	public static final ForgeConfigSpec.BooleanValue DISABLE;
-	public static final ForgeConfigSpec.IntValue PERMISSION_LEVEL_RESHUFFLE;
-	public static final ForgeConfigSpec.IntValue PERMISSION_LEVEL_REVOKE;
-	public static final ForgeConfigSpec.BooleanValue TYPE_SEPARATED;
+	public static final ModConfigSpec.LongValue SALT;
+	public static final ModConfigSpec.BooleanValue DISABLE;
+	public static final ModConfigSpec.IntValue PERMISSION_LEVEL_RESHUFFLE;
+	public static final ModConfigSpec.IntValue PERMISSION_LEVEL_REVOKE;
+	public static final ModConfigSpec.BooleanValue TYPE_SEPARATED;
 
-	public static final ForgeConfigSpec.IntValue AUTO_REFRESH_SECOND;
-	public static final ForgeConfigSpec.BooleanValue AUTO_REFRESH_CALLBACK;
+	public static final ModConfigSpec.IntValue AUTO_REFRESH_SECOND;
+	public static final ModConfigSpec.BooleanValue AUTO_REFRESH_CALLBACK;
 
 	static {
 		BUILDER.push("randomcrafting-server-config");

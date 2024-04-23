@@ -3,6 +3,7 @@ package com.hexagram2021.randomcrafting.mixin;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
 import com.hexagram2021.randomcrafting.config.RCCommonConfig;
@@ -11,9 +12,12 @@ import com.hexagram2021.randomcrafting.util.IMessUpRecipes;
 import com.hexagram2021.randomcrafting.util.IMutableItemStack;
 import com.hexagram2021.randomcrafting.util.ListShuffler;
 import com.hexagram2021.randomcrafting.util.RCLogger;
+import com.mojang.serialization.JsonOps;
 import net.minecraft.core.RegistryAccess;
+import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.util.GsonHelper;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.profiling.ProfilerFiller;
@@ -22,10 +26,8 @@ import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.item.crafting.RecipeType;
-import net.minecraftforge.common.ForgeHooks;
-import net.minecraftforge.common.crafting.conditions.ICondition;
+import net.neoforged.neoforge.common.conditions.ConditionalOps;
 import org.apache.commons.lang3.tuple.Triple;
-import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -33,21 +35,19 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import javax.annotation.Nullable;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 @Mixin(RecipeManager.class)
-public class RecipeManagerMixin implements IMessUpRecipes {
-	@Shadow @Final
-	private ICondition.IContext context;
-
+public abstract class RecipeManagerMixin extends SimpleJsonResourceReloadListener implements IMessUpRecipes {
 	@Shadow
 	private Map<RecipeType<?>, Map<ResourceLocation, RecipeHolder<?>>> recipes;
 
 	@Nullable
 	private Map<RecipeType<?>, Map<ResourceLocation, RecipeHolder<?>>> backup_recipes;
+
+	public RecipeManagerMixin(Gson gson, String directory) {
+		super(gson, directory);
+	}
 
 	@Inject(method = "apply(Ljava/util/Map;Lnet/minecraft/server/packs/resources/ResourceManager;Lnet/minecraft/util/profiling/ProfilerFiller;)V", at = @At(value = "TAIL"))
 	public void init_backups(Map<ResourceLocation, JsonElement> jsonMap, ResourceManager resourceManager, ProfilerFiller profilerFiller, CallbackInfo ci) {
@@ -60,20 +60,21 @@ public class RecipeManagerMixin implements IMessUpRecipes {
 			}
 
 			try {
-				if (entry.getValue().isJsonObject() && !ForgeHooks.readAndTestCondition(this.context, entry.getValue().getAsJsonObject())) {
-					RCLogger.debug("Skipping loading recipe {} as it's conditions were not met", id);
-					continue;
-				}
-				RecipeHolder<?> recipeHolder = RecipeManager.fromJson(id, GsonHelper.convertToJsonObject(entry.getValue(), "top element"));
-				Recipe<?> recipe = recipeHolder.value();
-				if (recipe == null) {	//CraftTweaker
-					RCLogger.info("Skipping loading recipe {} as it's serializer returned null", id);
-					continue;
-				}
-				if(!RCCommonConfig.WHITELIST_RECIPE_TYPES.get().contains(recipe.getType().toString()) &&
-						!RCCommonConfig.WHITELIST_RECIPES.get().contains(recipeHolder.id().toString())) {
-					backup_map.computeIfAbsent(recipe.getType(), recipeType -> ImmutableMap.builder()).put(id, recipeHolder);
-				}
+				Optional<RecipeHolder<?>> recipeHolderOptional = RecipeManager.fromJson(
+						id, GsonHelper.convertToJsonObject(entry.getValue(), "top element"),
+						ConditionalOps.create(RegistryOps.create(JsonOps.INSTANCE, this.registryAccess), this.conditionContext)
+				);
+				recipeHolderOptional.ifPresent(recipeHolder -> {
+					Recipe<?> recipe = recipeHolder.value();
+					if (recipe == null) {	//CraftTweaker
+						RCLogger.info("Skipping loading recipe {} as it's serializer returned null", id);
+						return;
+					}
+					if(!RCCommonConfig.WHITELIST_RECIPE_TYPES.get().contains(recipe.getType().toString()) &&
+							!RCCommonConfig.WHITELIST_RECIPES.get().contains(recipeHolder.id().toString())) {
+						backup_map.computeIfAbsent(recipe.getType(), recipeType -> ImmutableMap.builder()).put(id, recipeHolder);
+					}
+				});
 			} catch (IllegalArgumentException | JsonParseException ignored) { }
 		}
 

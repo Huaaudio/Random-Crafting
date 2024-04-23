@@ -1,29 +1,36 @@
 modLoader="javafml"
-loaderVersion="[48,)"
-license="LGPL"
+loaderVersion="${loader_version_range}"
+license="${mod_license}"
 issueTrackerURL="https://github.com/Viola-Siemens/Random-Crafting/issues"
 
 [[mods]]
-modId="randomcrafting"
-version="${file.jarVersion}"
-displayName="Random Crafting"
+modId="${mod_id}"
+version="${mod_version}"
+displayName="${mod_name}"
 logoFile="logo.png"
-credits="Liu Dongyu"
-authors="Hexagram"
-description='''
-All recipes are messed up by this mod. You may be able to get a stick from a iron block, or get a netherite ingot from three cobblestones. Can you still beat the game?
-'''
+credits="Hexagram"
+authors="${mod_authors}"
+description='''${mod_description}'''
 
-[[dependencies.randomcrafting]]
-    modId="forge"
+# [[accessTransformers]]
+#     file="META-INF/accesstransformer.cfg"
+
+[[dependencies.${mod_id}]]
+    modId="neoforge"
     mandatory=true
-    versionRange="[48,)"
+    versionRange="${neo_version_range}"
     ordering="NONE"
     side="BOTH"
 
-[[dependencies.randomcrafting]]
+[[dependencies.${mod_id}]]
     modId="minecraft"
     mandatory=true
-    versionRange="[1.20.2,1.21)"
+    versionRange="${minecraft_version_range}"
     ordering="NONE"
     side="BOTH"
+
+[[mixins]]
+    config="randomcrafting.mixins.json"
+
+# [features.${mod_id}]
+#     openGLVersion="[3.2,)"

@@ -2,15 +2,15 @@ package com.hexagram2021.randomcrafting.config;
 
 import com.google.common.collect.ImmutableList;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.common.ForgeConfigSpec;
+import net.neoforged.neoforge.common.ModConfigSpec;
 
 import java.util.List;
 
 public class RCCommonConfig {
-	public static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
-	public static final ForgeConfigSpec SPEC;
-	public static final ForgeConfigSpec.ConfigValue<List<? extends String>> WHITELIST_RECIPE_TYPES;
-	public static final ForgeConfigSpec.ConfigValue<List<? extends String>> WHITELIST_RECIPES;
+	public static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
+	public static final ModConfigSpec SPEC;
+	public static final ModConfigSpec.ConfigValue<List<? extends String>> WHITELIST_RECIPE_TYPES;
+	public static final ModConfigSpec.ConfigValue<List<? extends String>> WHITELIST_RECIPES;
 	
 	static {
 		BUILDER.push("randomcrafting-common-config");
