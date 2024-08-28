@@ -8,7 +8,9 @@ Put the .jar file under the `mods` folder and run the game.
 
 Edit `config/randomcrafting-common.toml` and `randomcrafting-server.toml` if desired.
 
-In the game, type `/rc reshuffle` to randomize all your craft recipes! 
+In the game, type `/rc shuffle` to randomize all your craft recipes! 
+
+Type `/rc reshuffle` if you are not satisfied with the current randomizer.
 
 Feel free to type `/rc revoke` when you want to revert the changes.
 
