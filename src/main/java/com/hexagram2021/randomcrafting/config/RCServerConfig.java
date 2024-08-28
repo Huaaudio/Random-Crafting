@@ -29,7 +29,7 @@ public class RCServerConfig {
 
 			TYPE_SEPARATED = BUILDER.comment("Set true if you don't want all recipe types mess up with each other. For example, minecraft:stone is uncraftable in vanilla but you can get it from furnace - if you set this to false, you may get it from crafting instead of smelting.")
 					.define("TYPE_SEPARATED", true);
-			ALLOW_RESHUFFLE_WITHOUT_CHEATS = BUILDER.comment("If true, allows the use of /rc reshuffle command without enabling cheats.").define("allow_reshuffle_without_cheats", false);
+			ALLOW_RESHUFFLE_WITHOUT_CHEATS = BUILDER.comment("If true, allows the use of /rc reshuffle command without enabling cheats.").define("ALLOW_RESHUFFLE_WITHOUT_CHEATS", true);
 			AUTO_REFRESH_SECOND = BUILDER.comment("Set to x (x > 0), server will automatically reshuffle recipes every x seconds. Set to 0 to disable.")
 					.defineInRange("AUTO_REFRESH_SECOND", 0, 0, 2147483647);
 			AUTO_REFRESH_CALLBACK = BUILDER.comment("Send message after automatically reshuffling recipes to every players online or not.")

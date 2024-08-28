@@ -18,6 +18,8 @@ import net.minecraft.util.RandomSource;
 public class RCCommands {
 	public static LiteralArgumentBuilder<CommandSourceStack> register() {
 		return Commands.literal("rc").then(
+				Commands.literal("shuffle").requires(stack -> canUseCommand(stack))
+						.executes(context -> shuffle(context.getSource().getServer()))).then(
 				Commands.literal("reshuffle").requires(stack -> canUseCommand(stack))
 						.executes(context -> reshuffle(context.getSource().getServer(), context.getSource().getPlayerOrException()))
 						.then(
@@ -54,6 +56,13 @@ public class RCCommands {
 		((IMessUpRecipes) server.getRecipeManager()).revoke(server.registryAccess());
 		sendRecipeUpdatePacket(server);
 		server.getPlayerList().broadcastSystemMessage(Component.translatable("commands.randomcrafting.revoke.success"), false);
+		return Command.SINGLE_SUCCESS;
+	}
+
+	private static int shuffle(MinecraftServer server) {
+		long salt = RCServerConfig.SALT.get();
+		autoShuffling(server, salt);
+		server.getPlayerList().broadcastSystemMessage(Component.translatable("commands.randomcrafting.reshuffle.success"), false);
 		return Command.SINGLE_SUCCESS;
 	}
 
