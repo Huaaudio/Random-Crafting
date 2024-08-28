@@ -61,6 +61,9 @@ public class RCCommands {
 
 	private static int shuffle(MinecraftServer server) {
 		long salt = RCServerConfig.SALT.get();
+		if(RCServerConfig.DISABLE.get()) {
+			RCServerConfig.DISABLE.set(false);
+		}
 		autoShuffling(server, salt);
 		server.getPlayerList().broadcastSystemMessage(Component.translatable("commands.randomcrafting.reshuffle.success"), false);
 		return Command.SINGLE_SUCCESS;
