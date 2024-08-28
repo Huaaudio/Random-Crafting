@@ -1,7 +1,9 @@
 package com.hexagram2021.randomcrafting.command;
 
+import com.hexagram2021.randomcrafting.config.RCCommonConfig;
 import com.hexagram2021.randomcrafting.config.RCServerConfig;
 import com.hexagram2021.randomcrafting.util.IMessUpRecipes;
+import com.hexagram2021.randomcrafting.util.RCLogger;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.LongArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -16,16 +18,21 @@ import net.minecraft.util.RandomSource;
 public class RCCommands {
 	public static LiteralArgumentBuilder<CommandSourceStack> register() {
 		return Commands.literal("rc").then(
-				Commands.literal("reshuffle").requires(stack -> stack.hasPermission(RCServerConfig.PERMISSION_LEVEL_RESHUFFLE.get()))
+				Commands.literal("reshuffle").requires(stack -> canUseCommand(stack))
 						.executes(context -> reshuffle(context.getSource().getServer(), context.getSource().getPlayerOrException()))
 						.then(
 								Commands.argument("salt", LongArgumentType.longArg())
 										.executes(context -> reshuffle(context.getSource().getServer(), LongArgumentType.getLong(context, "salt")))
 						)
 		).then(
-				Commands.literal("revoke").requires(stack -> stack.hasPermission(RCServerConfig.PERMISSION_LEVEL_REVOKE.get()))
+				Commands.literal("revoke").requires(stack -> canUseCommand(stack))
 						.executes(context -> revoke(context.getSource().getServer()))
 		);
+	}
+
+	private static boolean canUseCommand(CommandSourceStack stack) {
+		return RCServerConfig.ALLOW_RESHUFFLE_WITHOUT_CHEATS.get() ||
+				stack.hasPermission(RCServerConfig.PERMISSION_LEVEL_RESHUFFLE.get());
 	}
 
 	private static int reshuffle(MinecraftServer server, ServerPlayer entity) {
@@ -51,10 +58,39 @@ public class RCCommands {
 	}
 
 	public static void messup(MinecraftServer server) {
-		long seed = server.getWorldData().worldGenOptions().seed() ^ RCServerConfig.SALT.get();
-		RandomSource random = RandomSource.create(seed);
-		((IMessUpRecipes) server.getRecipeManager()).messup(random, server.registryAccess());
-		sendRecipeUpdatePacket(server);
+		if (!RCServerConfig.DISABLE.get()) {
+			long seed = server.getWorldData().worldGenOptions().seed() ^ RCServerConfig.SALT.get();
+			RandomSource random = RandomSource.create(seed);
+			try {
+				((IMessUpRecipes) server.getRecipeManager()).messup(random, server.registryAccess());
+				sendRecipeUpdatePacket(server);
+				RCLogger.info("Recipes shuffled successfully with seed: " + seed);
+			} catch (Exception e) {
+				RCLogger.error("Failed to shuffle recipes: " + e.getMessage());
+				e.printStackTrace();
+				server.getPlayerList().broadcastSystemMessage(Component.translatable("commands.randomcrafting.reshuffle.error"), false);
+			}
+		} else {
+			RCLogger.warn("Recipe shuffling is disabled. Skipping messup operation.");
+		}
+	}
+
+	public static void autoShuffling(MinecraftServer server, long salt) {
+		if (!RCServerConfig.DISABLE.get()) {
+			long seed = server.getWorldData().worldGenOptions().seed() ^ salt;
+			RandomSource random = RandomSource.create(seed);
+			try {
+				((IMessUpRecipes) server.getRecipeManager()).messup(random, server.registryAccess());
+				sendRecipeUpdatePacket(server);
+				RCLogger.info("Recipes shuffled successfully with last used salt: " + salt);
+			} catch (Exception e) {
+				RCLogger.error("Failed to shuffle recipes: " + e.getMessage());
+				e.printStackTrace();
+				server.getPlayerList().broadcastSystemMessage(Component.translatable("commands.randomcrafting.reshuffle.error"), false);
+			}
+		} else {
+			RCLogger.warn("Recipe shuffling is disabled. Skipping messup operation.");
+		}
 	}
 
 	private static void sendRecipeUpdatePacket(MinecraftServer server) {
